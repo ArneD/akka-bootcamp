@@ -7,7 +7,7 @@ using Akka.Actor;
 
 namespace ChartApp.Actors
 {
-    public class ChartingActor : ReceiveActor
+    public class ChartingActor : ReceiveActor, IWithUnboundedStash
     {
         #region Messages
 
@@ -74,6 +74,8 @@ namespace ChartApp.Actors
             Charting();
         }
 
+        public IStash Stash { get; set; }
+
         private void Charting()
         {
             Receive<InitializeChart>(ic => HandleInitialize(ic));
@@ -90,11 +92,15 @@ namespace ChartApp.Actors
 
         private void Paused()
         {
+            Receive<AddSeries>(addSeries => Stash.Stash());
+            Receive<RemoveSeries>(removeSeries => Stash.Stash());
             Receive<Metric>(metric => HandleMetricsPaused(metric));
             Receive<TogglePause>(pause =>
             {
                 SetPauseButtonText(false);
                 UnbecomeStacked();
+
+                Stash.UnstashAll();
             });
         }
 
@@ -203,5 +209,7 @@ namespace ChartApp.Actors
         {
             _pauseButton.Text = string.Format("{0}", !paused ? "PAUSE ||" : "RESUME ->");
         }
+
+        
     }
 }
